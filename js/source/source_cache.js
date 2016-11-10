@@ -39,7 +39,7 @@ class SourceCache extends Evented {
         });
 
         this.on('data', function(event) {
-            if (this._sourceLoaded && event.dataType === 'source') {
+            if (this._sourceLoaded && event.dataType === 'source' && !event.tile) {
                 this.reload();
                 if (this.transform) {
                     this.update(this.transform);
@@ -151,7 +151,7 @@ class SourceCache extends Evented {
 
         tile.sourceCache = this;
         tile.timeAdded = new Date().getTime();
-        this._source.fire('data', {tile: tile, dataType: 'tile'});
+        this._source.fire('data', {tile: tile, dataType: 'source'});
 
         // HACK this is nescessary to fix https://github.com/mapbox/mapbox-gl-js/issues/2986
         if (this.map) this.map.painter.tileExtentVAO.vao = null;
@@ -397,7 +397,7 @@ class SourceCache extends Evented {
 
         tile.uses++;
         this._tiles[coord.id] = tile;
-        this._source.fire('dataloading', {tile: tile, dataType: 'tile'});
+        this._source.fire('dataloading', {tile: tile, dataType: 'source'});
 
         return tile;
     }
@@ -415,7 +415,7 @@ class SourceCache extends Evented {
 
         tile.uses--;
         delete this._tiles[id];
-        this._source.fire('data', { tile: tile, dataType: 'tile' });
+        this._source.fire('data', { tile: tile, dataType: 'source' });
 
         if (tile.uses > 0)
             return;
