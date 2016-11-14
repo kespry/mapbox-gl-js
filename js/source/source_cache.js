@@ -27,8 +27,6 @@ class SourceCache extends Evented {
         this.id = id;
         this.dispatcher = dispatcher;
 
-        this._source = Source.create(id, options, dispatcher, this);
-
         this.on('source.load', function() {
             if (this.map && this._source.onAdd) { this._source.onAdd(this.map); }
             this._sourceLoaded = true;
@@ -46,6 +44,8 @@ class SourceCache extends Evented {
                 }
             }
         });
+
+        this._source = Source.create(id, options, dispatcher, this);
 
         this._tiles = {};
         this._cache = new Cache(0, this.unloadTile.bind(this));

@@ -1,9 +1,8 @@
 'use strict';
 
-const ajax = require('../util/ajax');
 const ImageSource = require('./image_source');
 
-/**
+/**         // TODO update documentation
  * A data source containing video.
  * (See the [Style Specification](https://www.mapbox.com/mapbox-gl-style-spec/#sources-video) for detailed documentation of options.)
  * @interface VideoSource
@@ -35,85 +34,81 @@ const ImageSource = require('./image_source');
  * map.removeSource('some id');  // remove
  * @see [Add a video](https://www.mapbox.com/mapbox-gl-js/example/video-on-a-map/)
  */
-class VideoSource extends ImageSource {
+class CanvasSource extends ImageSource {
     constructor(id, options, dispatcher, eventedParent) {
         super(id, options, dispatcher, eventedParent);
-        // this.type = 'video';
-        this.roundZoom = true;
+        // this.type = 'canvas';
     }
 
     _load(options) {
-        this.urls = options.urls;
+        this.canvas = window.document.getElementById(options.canvas);
 
-        ajax.getVideo(options.urls, (err, video) => {
-            if (err) return this.fire('error', {error: err});
+        this.dimensions = options.dimensions;
 
-            this.video = video;
-            this.video.loop = true;
+        this.canvasData = this.canvas.getContext('2d').getImageData(this.dimensions[0], this.dimensions[1], this.dimensions[2], this.dimensions[3]);
 
-            let loopID;
+        this.play = function() {
+            let loopID = this.map.style.animationLoop.set(Infinity);
+            this.map._rerender();
+        }
 
-            // start repainting when video starts playing
-            this.video.addEventListener('playing', () => {
-                loopID = this.map.style.animationLoop.set(Infinity);
-                this.map._rerender();
-            });
+        this._finishLoading();
+    }
 
-            // stop repainting when video stops
-            this.video.addEventListener('pause', () => {
-                this.map.style.animationLoop.cancel(loopID);
-            });
-
-            if (this.map) {
-                this.video.play();
-            }
-
-            this._finishLoading();
-        });
+    _rereadCanvas() {
+        this.canvasData = this.canvas.getContext('2d')
+            .getImageData(
+                this.dimensions[0],
+                this.dimensions[1],
+                this.dimensions[2],
+                this.dimensions[3]);
     }
 
     /**
-     * Returns the HTML `video` element.
+     * Returns the HTML `canvas` element.
      *
-     * @returns {HTMLVideoElement} The HTML `video` element.
+     * @returns {HTMLCanvasElement} The HTML `canvas` element.
      */
-    getVideo() {
-        return this.video;
+    getCanvas() {
+        return this.canvas;
     }
 
     onAdd(map) {
         if (this.map) return;
         this.map = map;
-        if (this.video) {
-            this.video.play();
+        if (this.canvasData) {
+            this.play();
             this.setCoordinates(this.coordinates);
         }
     }
 
     /**
-     * Sets the video's coordinates and re-renders the map.
+     * Sets the canvas's coordinates and re-renders the map.
      *
      * @method setCoordinates
      * @param {Array<Array<number>>} coordinates Four geographical coordinates,
-     *   represented as arrays of longitude and latitude numbers, which define the corners of the video.
-     *   The coordinates start at the top left corner of the video and proceed in clockwise order.
+     *   represented as arrays of longitude and latitude numbers, which define the corners of the canvas.
+     *   The coordinates start at the top left corner of the canvas and proceed in clockwise order.
      *   They do not have to represent a rectangle.
-     * @returns {VideoSource} this
+     * @returns {CanvasSource} this
      */
+        // console.log(this.canvasData.data.filter(d => d !== 0).length);
     // setCoordinates inherited from ImageSource
 
     prepare() {
-        if (!this.tile || this.video.readyState < 2) return; // not enough data for current position
-        this._prepareImage(this.map.painter.gl, this.video);
+        if (!this.tile) return; // not enough data for current position
+
+        this._rereadCanvas();
+        this._prepareImage(this.map.painter.gl, this.canvasData);
     }
 
     serialize() {
         return {
-            type: 'video',
-            urls: this.urls,
+            type: 'canvas',
+            canvas: this.canvas,
             coordinates: this.coordinates
         };
     }
 }
 
-module.exports = VideoSource;
+module.exports = CanvasSource;
