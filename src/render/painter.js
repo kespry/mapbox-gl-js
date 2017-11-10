@@ -404,6 +404,18 @@ class Painter {
             for (this.currentLayer; this.currentLayer < layerIds.length; this.currentLayer++) {
                 const layer = this.style._layers[layerIds[this.currentLayer]];
 
+                // <%hack%
+                const sourceOptions = layer.source ? this.style.sourceCaches[layer.source]._source._options : undefined;
+                let visible = true;
+                const transform = sourceOptions && sourceOptions.transform ? sourceOptions.transform : undefined;
+
+                if (transform && transform.enabled) {
+                  visible = this.transform.enableAffineTransform(layer.source);
+                } else {
+                  if (this.transform.disableAffineTransform) this.transform.disableAffineTransform();
+                }
+                // %hack%>
+
                 if (layer.source !== (sourceCache && sourceCache.id)) {
                     sourceCache = this.style.sourceCaches[layer.source];
                     coords = [];
@@ -419,7 +431,12 @@ class Painter {
                     coords.reverse();
                 }
 
-                this.renderLayer(this, (sourceCache: any), layer, coords);
+                // <%hack%
+                // mapbox/master v.0.41.0:
+                // this.renderLayer(this, (sourceCache: any), layer, coords);
+                if (visible) this.renderLayer(this, sourceCache, layer, coords);
+                if (this.transform.disableAffineTransform) this.transform.disableAffineTransform();
+                // %hack>
             }
         }
 
